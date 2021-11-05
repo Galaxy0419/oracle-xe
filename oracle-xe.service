@@ -2,7 +2,7 @@
 Description=Oracle Database Express Edition
 
 [Service]
-Environment=ORACLE_HOME=/opt/oracle/product/18c/dbhomeXE
+Environment=ORACLE_HOME=/opt/oracle/product/21c/dbhomeXE
 Environment=ORACLE_SID=XE
 User=oracle
 Group=oinstall
@@ -11,9 +11,9 @@ LimitNPROC=16384
 LimitSTACK=33554432
 LimitMEMLOCK=134217728
 Type=oneshot
-ExecStartPre=/opt/oracle/product/18c/dbhomeXE/bin/lsnrctl start LISTENER
-ExecStart=bash -c 'echo -e "connect / as sysdba\nstartup\nalter pluggable database all open\nexit;" | /opt/oracle/product/18c/dbhomeXE/bin/sqlplus -s /nolog'
-ExecStop=bash -c 'echo -e "connect / as sysdba\nshutdown immediate\nexit;" | /opt/oracle/product/18c/dbhomeXE/bin/sqlplus -s /nolog'
+ExecStartPre=/opt/oracle/product/21c/dbhomeXE/bin/lsnrctl start LISTENER
+ExecStart=bash -c 'echo -e "connect / as sysdba\nstartup\nalter pluggable database all open\nexit" | /opt/oracle/product/21c/dbhomeXE/bin/sqlplus -s /nolog'
+ExecStop=bash -c 'echo -e "connect / as sysdba\nshutdown immediate\nexit" | /opt/oracle/product/21c/dbhomeXE/bin/sqlplus -s /nolog'
 RemainAfterExit=yes
 
 [Install]

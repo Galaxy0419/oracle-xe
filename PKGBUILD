@@ -9,41 +9,47 @@
 # Contributor: JuliusTZM <julius dot tzm at gmail dot com>
 
 pkgname=oracle-xe
-pkgver=18.4.0.0.0
+pkgver=21.3.0.0.0
 pkgrel=1
 pkgdesc='Oracle Database Express Edition'
 url='https://www.oracle.com/database/'
 license=('custom')
 arch=('x86_64')
-depends=('bzip2' 'expat' 'gcc-libs' 'glibc' 'libaio')
+depends=('bzip2' 'expat' 'libaio')
 
-source=('https://download.oracle.com/otn-pub/otn_software/db-express/oracle-database-xe-18c-1.0-1.x86_64.rpm'
-		'oracle_env.csh'
-		'oracle_env.sh'
-		'oracle-xe.install'
-		'oracle-xe.service')
-sha256sums=('4df0318d72a0b97f5468b36919a23ec07533f5897b324843108e0376566d50c8'
-			'5472f8ea19a2b33780146bc95e5dc9263bb9c05b18150d24d08a85f04ed86b84'
-			'9b584b6403ec0a3c8567d1720347769c92ba9f02ee460979506d641a5aa32f8b'
-			'bc5cb49b6e8809b5f69aaef144b23d3a00e00cd10dbadee22d6b8adffb1d4872'
-			'332a48069e5019ef5b9efb2308da2738e37d46d848b7e0f993f76a125c48c5fc')
+source=('https://download.oracle.com/otn-pub/otn_software/db-express/oracle-database-xe-21c-1.0-1.ol8.x86_64.rpm'
+        'oracle-xe.csh'
+        'oracle-xe.sh'
+        'oracle-xe.install'
+        'oracle-xe.service')
+sha256sums=('f8357b432de33478549a76557e8c5220ec243710ed86115c65b0c2bc00a848db'
+            'a13051ee50375ad256251457883821f12f6070aaaa913c5bd7cbee6057b108d8'
+            'e007cc29fd3f3b2607042042634ac7a08c1b757c768dce3469a8f1d369e9bbed'
+            '09b40cbd94564c18151731c30334725340196f309b1b2305b1c5b5b2a32aece4'
+            'a8bc0edef1a7404de1b20e14ae1aa5385fa811d6e90fddda2a6ed3d15aa96e53')
 
 options=('!strip')
 install='oracle-xe.install'
 
+prepare() {
+    # Fix permissions
+    chown root:root opt/oracle/product/21c/dbhomeXE/bin/oradism
+    chmod 4755 opt/oracle/product/21c/dbhomeXE/bin/oradism
+}
+
 package() {
-	mv opt usr $pkgdir/
+    mv opt usr $pkgdir/
 
-	# Install Environment Files
-	install -D -m 744 oracle_env.csh $pkgdir/etc/profile.d/oracle_env.csh
-	install -D -m 744 oracle_env.sh $pkgdir/etc/profile.d/oracle_env.sh
+    # Install environment files
+    install -D -m 744 oracle-xe.csh $pkgdir/etc/profile.d/oracle-xe.csh
+    install -D -m 744 oracle-xe.sh $pkgdir/etc/profile.d/oracle-xe.sh
 
-	# Install Systemd Service File
-	install -D -m 644 oracle-xe.service $pkgdir/usr/lib/systemd/system/oracle-xe.service
+    # Install systemd service file
+    install -D -m 644 oracle-xe.service $pkgdir/usr/lib/systemd/system/oracle-xe.service
 
-	# Create oratab File
-	touch $pkgdir/etc/oratab
+    # Create oratab file
+    touch $pkgdir/etc/oratab
 
-	# Create oracle Home Directory
-	mkdir -p $pkgdir/var/lib/oracle
+    # Create oracle home directory
+    mkdir -p $pkgdir/var/lib/oracle
 }

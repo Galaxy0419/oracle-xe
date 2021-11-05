@@ -1,9 +1,9 @@
 pre_install() {
-	# Oracle Group Names and GIDs
+	# Oracle group names and GIDs
 	ORACLE_GIDS=('54321' '54322' '54323' '54324' '54325' '54326' '54330')
 	ORACLE_GROUP_NAMES=('oinstall' 'dba' 'oper' 'backupdba' 'dgdba' 'kmdba' 'racdba')
 
-	# Check if All the Users and Groups exist
+	# Check if all the users and groups exist
 	if getent passwd oracle || getent passwd 54321;then
 		echo "The user oracle with uid 54321 exists!" >&2
 		exit 1
@@ -15,7 +15,7 @@ pre_install() {
 		fi
 	done
 
-	# Create All Required Users and Groups
+	# Create all required users and groups
 	for ((i = 0; i < ${#ORACLE_GIDS[@]}; ++i));do
 		groupadd --system --gid ${ORACLE_GIDS[i]} ${ORACLE_GROUP_NAMES[i]}
 	done
@@ -24,31 +24,67 @@ pre_install() {
 }
 
 post_install() {
-	# Fix Permissions
+	# Fix permissions
 	chown -R oracle:oinstall /opt/oracle /etc/oratab /var/lib/oracle
 
-	# Create Default Database Listener
-	su -s /bin/bash oracle -c '/opt/oracle/product/18c/dbhomeXE/bin/netca -silent \
-		-orahome /opt/oracle/product/18c/dbhomeXE -instype typical -inscomp client,oraclenet,javavm,server,ano \
-		-responseFile /opt/oracle/product/18c/dbhomeXE/network/install/netca_typ.rsp -insprtcl tcp -cfg local \
+	# Create default database listener
+	su -s /bin/bash oracle -c '/opt/oracle/product/21c/dbhomeXE/bin/netca -silent \
+		-orahome /opt/oracle/product/21c/dbhomeXE -instype typical -inscomp client,oraclenet,javavm,server,ano \
+		-responseFile /opt/oracle/product/21c/dbhomeXE/network/install/netca_typ.rsp -insprtcl tcp -cfg local \
 		-authadp NO_VALUE -orahnam OraHomeXE -listenerparameters DEFAULT_SERVICE=XE'
 
-	# Create Default Pluggable Database
+	# Create default pluggable database
 	cat <<- 'EOF'
 
 		[Info] Use the following with root command to set password and create default pluggable database:
-		su -s /bin/bash oracle -c '/opt/oracle/product/18c/dbhomeXE/bin/dbca -silent \
-			-createDatabase -gdbName XE -templateName XE_Database.dbc -characterSet AL32UTF8 \
-			-createAsContainerDatabase true -numberOfPDBs 1 -sid XE -pdbName XEPDB1 \
-			-J-Doracle.assistants.dbca.validate.ConfigurationParams=false -emConfiguration DBEXPRESS \
-			-emExpressPort 5500 -J-Doracle.assistants.dbca.validate.DBCredentials=false -sampleSchema true \
-			-customScripts /opt/oracle/product/18c/dbhomeXE/assistants/dbca/postdb_creation.sql'
+		su -s /bin/bash oracle -c '/opt/oracle/product/21c/dbhomeXE/bin/dbca -silent \
+			-createDatabase -templateName XE_Database.dbc -characterSet AL32UTF8 -createAsContainerDatabase true \
+			-numberOfPDBs 1 -pdbName XEPDB1 -sid XE -emConfiguration DBEXPRESS -emExpressPort 5500 \
+			-J-Doracle.assistants.dbca.validate.DBCredentials=false -ignorePrereqs \
+			-J-Doracle.assistants.skipAvailableSharedMemoryCheck=true -skipDatapatch true -emExpressPortAsGlobalPort true \
+			-customScripts /opt/oracle/product/21c/dbhomeXE/assistants/dbca/postdb_creation.sql -gdbName XE'
+
+	EOF
+}
+
+pre_upgrade() {
+	# Terminate all processes
+	PIDs=$(ps aux | grep -E '^oracle' | grep -v grep | awk '{print $2}')
+	if [ "$PIDs" ];then
+		kill -SIGKILL $PIDs
+	fi
+
+	# Remove generated files and directories
+	find /opt/oracle -mindepth 1 -maxdepth 1 ! -name 'product' -exec rm -rf {} +
+	find /opt/oracle/product -mindepth 1 -maxdepth 1 ! -name '21c' -exec rm -rf {} +
+}
+
+post_upgrade() {
+	# Fix permissions
+	chown -R oracle:oinstall /opt/oracle /etc/oratab /var/lib/oracle
+
+	# Create default database listener
+	su -s /bin/bash oracle -c '/opt/oracle/product/21c/dbhomeXE/bin/netca -silent \
+		-orahome /opt/oracle/product/21c/dbhomeXE -instype typical -inscomp client,oraclenet,javavm,server,ano \
+		-responseFile /opt/oracle/product/21c/dbhomeXE/network/install/netca_typ.rsp -insprtcl tcp -cfg local \
+		-authadp NO_VALUE -orahnam OraHomeXE -listenerparameters DEFAULT_SERVICE=XE'
+
+	# Create default pluggable database
+	cat <<- 'EOF'
+
+		[Info] Use the following with root command to set password and create default pluggable database:
+		su -s /bin/bash oracle -c '/opt/oracle/product/21c/dbhomeXE/bin/dbca -silent \
+			-createDatabase -templateName XE_Database.dbc -characterSet AL32UTF8 -createAsContainerDatabase true \
+			-numberOfPDBs 1 -pdbName XEPDB1 -sid XE -emConfiguration DBEXPRESS -emExpressPort 5500 \
+			-J-Doracle.assistants.dbca.validate.DBCredentials=false -ignorePrereqs \
+			-J-Doracle.assistants.skipAvailableSharedMemoryCheck=true -skipDatapatch true -emExpressPortAsGlobalPort true \
+			-customScripts /opt/oracle/product/21c/dbhomeXE/assistants/dbca/postdb_creation.sql -gdbName XE'
 
 	EOF
 }
 
 pre_remove() {
-	# Terminate All Processes
+	# Terminate all processes
 	PIDs=$(ps aux | grep -E '^oracle' | grep -v grep | awk '{print $2}')
 	if [ "$PIDs" ];then
 		kill -SIGKILL $PIDs
@@ -56,15 +92,15 @@ pre_remove() {
 }
 
 post_remove() {
-	# Oracle Group Names and GIDs
+	# Oracle group names and GIDs
 	ORACLE_GROUP_NAMES=('oinstall' 'dba' 'oper' 'backupdba' 'dgdba' 'kmdba' 'racdba')
 
-	# Remove Oracle Users and Groups
+	# Remove oracle users and groups
 	userdel oracle
 	for gp in ${ORACLE_GROUP_NAMES[@]};do
 		groupdel $gp
 	done
 
-	# Remove Database Files
+	# Remove database files
 	rm -rf /opt/oracle /var/lib/oracle
 }
